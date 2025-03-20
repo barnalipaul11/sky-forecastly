@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { searchCities } from "@/lib/api";
 import { Search, MapPin } from "lucide-react";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface CitySearchProps {

@@ -1,5 +1,5 @@
 
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 
 // OpenWeatherMap API key
 const API_KEY = "YOUR_OPENWEATHERMAP_API_KEY";

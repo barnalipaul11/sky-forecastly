@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import CitySearch from "@/components/CitySearch";
 import CurrentWeather from "@/components/CurrentWeather";
 import Forecast from "@/components/Forecast";
