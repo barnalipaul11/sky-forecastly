@@ -1,26 +1,74 @@
 
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { format, fromUnixTime } from "date-fns";
+import { format, fromUnixTime, parseISO } from "date-fns";
 
 // Combines class names with Tailwind's utility classes
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Format unix timestamp to readable date
+// Format ISO date to readable date
+export function formatISODate(isoString: string, formatString: string = "EEE, MMM d") {
+  return format(parseISO(isoString), formatString);
+}
+
+// Format unix timestamp to readable date (for compatibility)
 export function formatUnixDate(unixTime: number, formatString: string = "EEE, MMM d") {
   return format(fromUnixTime(unixTime), formatString);
 }
 
-// Format unix timestamp to readable time
+// Format unix timestamp to readable time (for compatibility)
 export function formatUnixTime(unixTime: number) {
   return format(fromUnixTime(unixTime), "h:mm a");
 }
 
-// Get the correct weather icon based on OpenWeatherMap icon code
-export function getWeatherIcon(iconCode: string) {
-  return `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+// Get the correct weather icon based on weather code
+export function getWeatherIcon(weatherCode: number | string) {
+  // Convert to number if it's a string (for compatibility with old code)
+  const code = typeof weatherCode === 'string' 
+    ? 800 // Default clear sky if string passed
+    : Number(weatherCode);
+  
+  // WMO Weather interpretation codes (WW)
+  // https://open-meteo.com/en/docs
+  if (code === 0) return "https://openweathermap.org/img/wn/01d@2x.png"; // Clear sky
+  if (code === 1) return "https://openweathermap.org/img/wn/01d@2x.png"; // Mainly clear
+  if (code === 2) return "https://openweathermap.org/img/wn/02d@2x.png"; // Partly cloudy
+  if (code === 3) return "https://openweathermap.org/img/wn/03d@2x.png"; // Overcast
+  if (code >= 45 && code <= 48) return "https://openweathermap.org/img/wn/50d@2x.png"; // Fog
+  if (code >= 51 && code <= 55) return "https://openweathermap.org/img/wn/09d@2x.png"; // Drizzle
+  if (code >= 56 && code <= 57) return "https://openweathermap.org/img/wn/13d@2x.png"; // Freezing Drizzle
+  if (code >= 61 && code <= 65) return "https://openweathermap.org/img/wn/10d@2x.png"; // Rain
+  if (code >= 66 && code <= 67) return "https://openweathermap.org/img/wn/13d@2x.png"; // Freezing Rain
+  if (code >= 71 && code <= 77) return "https://openweathermap.org/img/wn/13d@2x.png"; // Snow
+  if (code >= 80 && code <= 82) return "https://openweathermap.org/img/wn/09d@2x.png"; // Rain showers
+  if (code >= 85 && code <= 86) return "https://openweathermap.org/img/wn/13d@2x.png"; // Snow showers
+  if (code === 95) return "https://openweathermap.org/img/wn/11d@2x.png"; // Thunderstorm
+  if (code >= 96 && code <= 99) return "https://openweathermap.org/img/wn/11d@2x.png"; // Thunderstorm with hail
+  
+  return "https://openweathermap.org/img/wn/02d@2x.png"; // Default partly cloudy
+}
+
+// Get weather description based on weather code
+export function getWeatherDescription(weatherCode: number) {
+  // WMO Weather interpretation codes (WW)
+  if (weatherCode === 0) return "Clear sky";
+  if (weatherCode === 1) return "Mainly clear";
+  if (weatherCode === 2) return "Partly cloudy";
+  if (weatherCode === 3) return "Overcast";
+  if (weatherCode >= 45 && weatherCode <= 48) return "Fog";
+  if (weatherCode >= 51 && weatherCode <= 55) return "Drizzle";
+  if (weatherCode >= 56 && weatherCode <= 57) return "Freezing Drizzle";
+  if (weatherCode >= 61 && weatherCode <= 65) return "Rain";
+  if (weatherCode >= 66 && weatherCode <= 67) return "Freezing Rain";
+  if (weatherCode >= 71 && weatherCode <= 77) return "Snow";
+  if (weatherCode >= 80 && weatherCode <= 82) return "Rain showers";
+  if (weatherCode >= 85 && weatherCode <= 86) return "Snow showers";
+  if (weatherCode === 95) return "Thunderstorm";
+  if (weatherCode >= 96 && weatherCode <= 99) return "Thunderstorm with hail";
+  
+  return "Unknown";
 }
 
 // Get weather condition description with capitalized first letter
@@ -35,43 +83,33 @@ export function formatTemp(temp: number) {
   return `${Math.round(temp)}°`;
 }
 
-// Group forecast data by day
-export function groupForecastByDay(forecastList: any[]) {
-  const grouped: Record<string, any[]> = {};
+// Group forecast data into daily format
+export function groupForecastByDay(weatherData: any) {
+  if (!weatherData?.daily) return [];
   
-  forecastList.forEach(item => {
-    const date = format(fromUnixTime(item.dt), 'yyyy-MM-dd');
-    
-    if (!grouped[date]) {
-      grouped[date] = [];
-    }
-    
-    grouped[date].push(item);
-  });
+  const { daily, hourly } = weatherData;
   
-  // Get daily min and max temperatures
-  return Object.entries(grouped).map(([date, items]) => {
-    const temperatures = items.map(item => item.main.temp);
-    const minTemp = Math.min(...temperatures);
-    const maxTemp = Math.max(...temperatures);
+  return daily.time.map((date: string, index: number) => {
+    // Get the hourly data for the middle of the day (noon)
+    const dateStr = date.split('T')[0];
+    const noonHourIndex = hourly.time.findIndex((time: string) => 
+      time.includes(dateStr) && time.includes('12:00')
+    );
     
-    // Use the noon forecast or the middle item for representing the day
-    const middleIndex = Math.floor(items.length / 2);
-    const representativeItem = items.find(item => {
-      const hour = format(fromUnixTime(item.dt), 'H');
-      return hour === '12';
-    }) || items[middleIndex];
+    // Use noon data or first hour of the day if noon not available
+    const hourIndex = noonHourIndex !== -1 ? noonHourIndex : 
+      hourly.time.findIndex((time: string) => time.includes(dateStr));
     
     return {
-      date,
-      dateFormatted: formatUnixDate(items[0].dt),
-      minTemp,
-      maxTemp,
-      icon: representativeItem.weather[0].icon,
-      description: representativeItem.weather[0].description,
-      humidity: representativeItem.main.humidity,
-      windSpeed: representativeItem.wind.speed,
-      dt: representativeItem.dt,
+      date: dateStr,
+      dateFormatted: formatISODate(date),
+      minTemp: daily.temperature_2m_min[index],
+      maxTemp: daily.temperature_2m_max[index],
+      icon: daily.weathercode[index],
+      description: getWeatherDescription(daily.weathercode[index]),
+      humidity: hourly.relativehumidity_2m[hourIndex] || 0,
+      windSpeed: daily.windspeed_10m_max[index] || 0,
+      dt: new Date(date).getTime() / 1000, // Convert to Unix timestamp for compatibility
     };
   }).slice(0, 5); // Limit to 5 days
 }

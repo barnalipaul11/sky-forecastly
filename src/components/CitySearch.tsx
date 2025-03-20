@@ -101,7 +101,7 @@ export default function CitySearch({ onCitySelect, className }: CitySearchProps)
                 <MapPin size={16} className="text-primary" />
                 <span>
                   {city.name}, {city.country}
-                  {city.state && ` (${city.state})`}
+                  {city.admin1 && ` (${city.admin1})`}
                 </span>
               </li>
             ))}

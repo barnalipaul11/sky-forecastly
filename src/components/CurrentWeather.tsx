@@ -1,5 +1,5 @@
 
-import { formatTemp, formatWeatherDescription, getWeatherIcon } from "@/lib/utils";
+import { formatTemp, formatWeatherDescription, getWeatherIcon, getWeatherDescription } from "@/lib/utils";
 import { Wind, Droplets, ThermometerSun } from "lucide-react";
 
 interface CurrentWeatherProps {
@@ -11,13 +11,24 @@ export default function CurrentWeather({ data, airQuality }: CurrentWeatherProps
   if (!data) return null;
 
   const {
-    name,
-    main,
-    weather,
-    wind,
-    sys,
+    current_weather,
+    hourly,
+    city
   } = data;
 
+  // Get current hour data
+  const currentTemp = current_weather.temperature;
+  const currentHourIndex = hourly.time.findIndex((time: string) => 
+    new Date(time).getHours() === new Date().getHours()
+  );
+  
+  const currentHumidity = hourly.relativehumidity_2m[currentHourIndex] || 0;
+  const currentApparentTemp = hourly.apparent_temperature[currentHourIndex] || currentTemp;
+  
+  // Get daily min/max from first day
+  const minTemp = data.daily.temperature_2m_min[0];
+  const maxTemp = data.daily.temperature_2m_max[0];
+  
   const aqi = airQuality?.list?.[0]?.main?.aqi;
   
   function getAqiLabel(aqi: number) {
@@ -36,31 +47,33 @@ export default function CurrentWeather({ data, airQuality }: CurrentWeatherProps
     return colors[aqi - 1] || "bg-gray-400";
   }
 
+  const weatherDescription = getWeatherDescription(current_weather.weathercode);
+
   return (
     <div className="glass-panel rounded-2xl overflow-hidden p-6 animate-fade-in">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Location and Temperature */}
         <div className="text-center md:text-left">
           <h2 className="text-2xl font-medium text-gray-700">
-            {name}, {sys.country}
+            {city.name}, {city.country}
           </h2>
           <div className="flex items-center justify-center md:justify-start gap-4 mt-2">
-            <div className="text-6xl font-light">{formatTemp(main.temp)}</div>
+            <div className="text-6xl font-light">{formatTemp(currentTemp)}</div>
             <div>
               <div className="text-sm text-gray-500">Feels like</div>
-              <div className="text-xl">{formatTemp(main.feels_like)}</div>
+              <div className="text-xl">{formatTemp(currentApparentTemp)}</div>
             </div>
           </div>
           <div className="mt-1 text-lg text-gray-600 capitalize">
-            {formatWeatherDescription(weather[0].description)}
+            {formatWeatherDescription(weatherDescription)}
           </div>
         </div>
 
         {/* Weather Icon */}
         <div className="flex-shrink-0">
           <img
-            src={getWeatherIcon(weather[0].icon)}
-            alt={weather[0].description}
+            src={getWeatherIcon(current_weather.weathercode)}
+            alt={weatherDescription}
             className="w-24 h-24 object-contain"
           />
         </div>
@@ -75,7 +88,7 @@ export default function CurrentWeather({ data, airQuality }: CurrentWeatherProps
           <div>
             <div className="text-sm text-gray-500">Min / Max</div>
             <div className="font-medium">
-              {formatTemp(main.temp_min)} / {formatTemp(main.temp_max)}
+              {formatTemp(minTemp)} / {formatTemp(maxTemp)}
             </div>
           </div>
         </div>
@@ -86,7 +99,7 @@ export default function CurrentWeather({ data, airQuality }: CurrentWeatherProps
           </div>
           <div>
             <div className="text-sm text-gray-500">Humidity</div>
-            <div className="font-medium">{main.humidity}%</div>
+            <div className="font-medium">{currentHumidity}%</div>
           </div>
         </div>
 
@@ -96,7 +109,7 @@ export default function CurrentWeather({ data, airQuality }: CurrentWeatherProps
           </div>
           <div>
             <div className="text-sm text-gray-500">Wind Speed</div>
-            <div className="font-medium">{(wind.speed * 3.6).toFixed(1)} km/h</div>
+            <div className="font-medium">{current_weather.windspeed.toFixed(1)} km/h</div>
           </div>
         </div>
       </div>
