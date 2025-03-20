@@ -2,6 +2,7 @@
 import { toast } from "sonner";
 
 // OpenWeatherMap API key
+// Replace this with your actual API key from https://openweathermap.org/api
 const API_KEY = "YOUR_OPENWEATHERMAP_API_KEY";
 const BASE_URL = "https://api.openweathermap.org/data/2.5";
 
